@@ -1,69 +1,47 @@
-import { useState, useEffect } from 'react';
-
 export function useTelegram() {
-  const [tg, setTg] = useState(null);
-  const [user, setUser] = useState(null);
-  const [initData, setInitData] = useState(null);
-  const [isTelegramWebApp, setIsTelegramWebApp] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [state, setState] = useState({
+    tg: null,
+    user: null,
+    initData: null,
+    isTelegramWebApp: false,
+    isInitialized: false
+  });
 
   useEffect(() => {
     const init = () => {
-      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-        // Running in Telegram WebApp
+      // Check for force web mode
+      const forceWebMode = localStorage.getItem("forceWebMode") === "true";
+      
+      if (!forceWebMode && typeof window !== 'undefined' && window.Telegram?.WebApp) {
+        // Telegram WebApp
         const telegram = window.Telegram.WebApp;
         telegram.expand();
         telegram.ready();
 
-        setTg(telegram);
-        setUser(telegram.initDataUnsafe?.user ?? null);
-        setInitData(telegram.initData ?? null);
-        setIsTelegramWebApp(true);
-        
-        console.log("Telegram WebApp initialized:", {
-          user: telegram.initDataUnsafe?.user,
-          platform: telegram.platform
+        setState({
+          tg: telegram,
+          user: telegram.initDataUnsafe?.user ?? null,
+          initData: telegram.initData ?? null,
+          isTelegramWebApp: true,
+          isInitialized: true
         });
-      } else if (import.meta.env.DEV) {
-        // Development mode simulation
-        console.warn("Development mode - simulating Telegram WebApp");
-        const fakeUser = { 
-          id: 123456, 
-          first_name: "DevUser",
-          last_name: "Test",
-          username: "dev_user",
-          language_code: "en"
-        };
-
-        setTg({
-          close: () => console.log("WebApp closed"),
-          showAlert: (msg) => alert(`ALERT: ${msg}`),
-          showConfirm: (msg) => confirm(`CONFIRM: ${msg}`),
-          expand: () => console.log("WebApp expanded"),
-          ready: () => console.log("WebApp ready")
-        });
-        setUser(fakeUser);
-        setInitData("fake_init_data");
-        setIsTelegramWebApp(true);
       } else {
-        // Not in Telegram
-        console.warn("Not running in Telegram WebApp");
-        setIsTelegramWebApp(false);
+        // Not Telegram or force web mode
+        setState(prev => ({
+          ...prev,
+          isInitialized: true,
+          isTelegramWebApp: false
+        }));
       }
-      setIsInitialized(true);
     };
 
     init();
   }, []);
 
   return { 
-    tg, 
-    user, 
-    initData, 
-    isTelegramWebApp,
-    isInitialized,
-    closeWebApp: () => isTelegramWebApp && tg?.close(),
-    showAlert: (message) => isTelegramWebApp ? tg?.showAlert(message) : alert(message),
-    showConfirm: (message) => isTelegramWebApp ? tg?.showConfirm(message) : confirm(message),
+    ...state,
+    closeWebApp: () => state.isTelegramWebApp && state.tg?.close(),
+    showAlert: (message) => state.isTelegramWebApp ? state.tg?.showAlert(message) : alert(message),
+    showConfirm: (message) => state.isTelegramWebApp ? state.tg?.showConfirm(message) : confirm(message),
   };
 }

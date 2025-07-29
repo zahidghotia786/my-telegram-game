@@ -1,9 +1,3 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { motion } from "framer-motion";
-import { useTelegram } from "../hooks/useTelegram";
-import { CustomButton } from "../components/common/CustomButton";
-
 export default function Login() {
   const { 
     tg, 
@@ -19,68 +13,35 @@ export default function Login() {
   const [error, setError] = useState("");
   const [showFallbackUI, setShowFallbackUI] = useState(false);
 
-  // Check if we should show fallback UI (not in Telegram)
+  // Check environment and show appropriate UI
   useEffect(() => {
+    if (!isInitialized) return;
+
     const timer = setTimeout(() => {
-      if (isInitialized && !isTelegramWebApp) {
-        setShowFallbackUI(true);
-        setLoading(false);
-      }
-    }, 2000);
+      setShowFallbackUI(!isTelegramWebApp);
+      setLoading(false);
+    }, isTelegramWebApp ? 0 : 2000); // Show fallback immediately in WebApp mode
 
     return () => clearTimeout(timer);
   }, [isInitialized, isTelegramWebApp]);
 
-  // Authentication flow
-  useEffect(() => {
-    if (!isInitialized || !isTelegramWebApp) return;
+  // Handle "Continue in Web Mode" button
+  const handleWebMode = () => {
+    localStorage.setItem("forceWebMode", "true");
+    localStorage.setItem(
+      "vipCasinoUser",
+      JSON.stringify({
+        user: { id: Date.now(), first_name: "Web User" },
+        initData: "web_mode_init_data"
+      })
+    );
+    window.location.href = "/home";
+  };
 
-    const authenticate = async () => {
-      try {
-        setError("");
-        setLoading(true);
-
-        // In development, skip actual API call
-        if (import.meta.env.DEV) {
-          console.log("Dev mode - skipping actual authentication");
-          localStorage.setItem(
-            "vipCasinoUser",
-            JSON.stringify({ user, initData })
-          );
-          window.location.href = "/home";
-          return;
-        }
-
-        const API_URL = import.meta.env.VITE_API_URL;
-        const response = await axios.post(`${API_URL}/api/auth`, { initData });
-
-        if (response.data.success) {
-          localStorage.setItem(
-            "vipCasinoUser",
-            JSON.stringify({ user, initData })
-          );
-          window.location.href = "/home";
-        } else {
-          throw new Error(response.data.message || "Authentication failed");
-        }
-      } catch (err) {
-        const errorMessage = err.response?.data?.message || 
-                           err.message || 
-                           "Authentication failed";
-        setError(errorMessage);
-        showAlert(`Login failed: ${errorMessage}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (initData) {
-      authenticate();
-    } else {
-      setLoading(false);
-      setError("Missing Telegram initialization data");
-    }
-  }, [initData, isTelegramWebApp, isInitialized, showAlert, user]);
+  // Handle "Open in Telegram" button
+  const handleOpenTelegram = () => {
+    window.location.href = "https://t.me/zg_casino_bot";
+  };
 
   if (showFallbackUI) {
     return (
@@ -99,17 +60,14 @@ export default function Login() {
           <div className="space-y-3">
             <CustomButton
               className="w-full"
-              onClick={() => window.location.href = "https://t.me/zg_casino_bot"}
+              onClick={handleOpenTelegram}
             >
               Open in Telegram
             </CustomButton>
             <CustomButton
               variant="secondary"
               className="w-full"
-              onClick={() => {
-                localStorage.setItem("forceWebMode", "true");
-                window.location.reload();
-              }}
+              onClick={handleWebMode}
             >
               Continue in Web Mode
             </CustomButton>
@@ -118,6 +76,7 @@ export default function Login() {
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black to-gray-800 text-white px-6">
