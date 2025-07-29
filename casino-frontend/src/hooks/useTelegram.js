@@ -21,6 +21,7 @@ export function useTelegram() {
       setUser(telegram.initDataUnsafe?.user ?? null);
       setQueryId(telegram.initDataUnsafe?.query_id ?? null);
       setInitData(telegram.initData ?? null);
+      setIsTelegramWebApp(true);
 
       // Initialize the WebApp
       telegram.ready();
@@ -33,6 +34,7 @@ export function useTelegram() {
       });
     } else {
       console.warn("⚠️ Not running in Telegram WebApp - some features will be disabled");
+      setIsTelegramWebApp(false);
     }
   }, []);
 
