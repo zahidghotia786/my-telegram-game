@@ -5,51 +5,82 @@ import { useTelegram } from "../hooks/useTelegram";
 import { CustomButton } from "../components/common/CustomButton";
 
 export default function Login() {
-  const { tg, initData, user, isTelegramWebApp, closeWebApp, showAlert } =
-    useTelegram();
+  const { 
+    tg, 
+    initData, 
+    user, 
+    isTelegramWebApp, 
+    isInitialized,
+    closeWebApp, 
+    showAlert 
+  } = useTelegram();
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showFallbackUI, setShowFallbackUI] = useState(false);
 
+  // Check if we should show fallback UI (not in Telegram)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!isTelegramWebApp) {
+      if (isInitialized && !isTelegramWebApp) {
         setShowFallbackUI(true);
         setLoading(false);
       }
     }, 2000);
-    return () => clearTimeout(timer);
-  }, [isTelegramWebApp]);
 
+    return () => clearTimeout(timer);
+  }, [isInitialized, isTelegramWebApp]);
+
+  // Authentication flow
   useEffect(() => {
-    if (!isTelegramWebApp || !initData) return;
+    if (!isInitialized || !isTelegramWebApp) return;
 
     const authenticate = async () => {
       try {
+        setError("");
+        setLoading(true);
+
+        // In development, skip actual API call
+        if (import.meta.env.DEV) {
+          console.log("Dev mode - skipping actual authentication");
+          localStorage.setItem(
+            "vipCasinoUser",
+            JSON.stringify({ user, initData })
+          );
+          window.location.href = "/home";
+          return;
+        }
+
         const API_URL = import.meta.env.VITE_API_URL;
-        await axios.post(`${API_URL}/api/auth`, { initData });
+        const response = await axios.post(`${API_URL}/api/auth`, { initData });
 
-        localStorage.setItem(
-          "vipCasinoUser",
-          JSON.stringify({
-            user,
-            initData,
-          })
-        );
-
-        window.location.href = "/home";
+        if (response.data.success) {
+          localStorage.setItem(
+            "vipCasinoUser",
+            JSON.stringify({ user, initData })
+          );
+          window.location.href = "/home";
+        } else {
+          throw new Error(response.data.message || "Authentication failed");
+        }
       } catch (err) {
-        setError(err.response?.data?.message || "Authentication failed");
-        showAlert(
-          `Login failed: ${err.response?.data?.message || "Unknown error"}`
-        );
+        const errorMessage = err.response?.data?.message || 
+                           err.message || 
+                           "Authentication failed";
+        setError(errorMessage);
+        showAlert(`Login failed: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
     };
 
-    authenticate();
-  }, [initData, isTelegramWebApp, showAlert]);
+    if (initData) {
+      authenticate();
+    } else {
+      setLoading(false);
+      setError("Missing Telegram initialization data");
+    }
+  }, [initData, isTelegramWebApp, isInitialized, showAlert, user]);
 
   if (showFallbackUI) {
     return (
@@ -63,16 +94,26 @@ export default function Login() {
             🚫 Not in Telegram
           </h2>
           <p className="text-sm text-gray-300">
-            This app is meant to run inside Telegram WebApp.
+            This app is designed to run inside Telegram WebApp for the best experience.
           </p>
-          <CustomButton
-            className="w-full"
-            onClick={() =>
-              (window.location.href = "https://t.me/zg_casino_bot")
-            }
-          >
-            Open in Telegram
-          </CustomButton>
+          <div className="space-y-3">
+            <CustomButton
+              className="w-full"
+              onClick={() => window.location.href = "https://t.me/zg_casino_bot"}
+            >
+              Open in Telegram
+            </CustomButton>
+            <CustomButton
+              variant="secondary"
+              className="w-full"
+              onClick={() => {
+                localStorage.setItem("forceWebMode", "true");
+                window.location.reload();
+              }}
+            >
+              Continue in Web Mode
+            </CustomButton>
+          </div>
         </motion.div>
       </div>
     );
@@ -99,9 +140,11 @@ export default function Login() {
             <CustomButton onClick={() => window.location.reload()}>
               🔁 Try Again
             </CustomButton>
-            <CustomButton variant="destructive" onClick={closeWebApp}>
-              ❌ Close
-            </CustomButton>
+            {isTelegramWebApp && (
+              <CustomButton variant="destructive" onClick={closeWebApp}>
+                ❌ Close
+              </CustomButton>
+            )}
           </div>
         </motion.div>
       ) : (
@@ -113,6 +156,9 @@ export default function Login() {
           <h2 className="text-3xl font-bold">
             🎉 Welcome, {user?.first_name || "User"}!
           </h2>
+          <p className="mt-2 text-gray-300">
+            Redirecting you to the app...
+          </p>
         </motion.div>
       )}
     </div>
