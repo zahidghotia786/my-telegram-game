@@ -1,0 +1,13 @@
+{
+  "text": "Play Casino Now 🎰",
+  "reply_markup": {
+    "inline_keyboard": [[
+      {
+        "text": "🎰 Launch Casino",
+        "web_app": {
+          "url": "http://localhost:5173/"
+        }
+      }
+    ]]
+  }
+}

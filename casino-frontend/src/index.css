@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* index.css */
+body {
+  @apply font-sans bg-black text-white;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
