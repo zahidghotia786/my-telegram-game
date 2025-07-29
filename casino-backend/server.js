@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(cors({
-  origin: "https://af5d554a3804.ngrok-free.app", // <-- ngrok frontend
+  origin: "https://my-telegram-game-ten.vercel.app", // <-- ngrok frontend
   credentials: true,
 }));
 app.use(express.json());

@@ -3,41 +3,40 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { useTelegram } from "../hooks/useTelegram";
 import { CustomButton } from "../components/common/CustomButton";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const { tg, initData, user, isTelegramWebApp, closeWebApp, showAlert } =
-    useTelegram();
+  const {
+    tg,
+    initData,
+    user,
+    isTelegramWebApp,
+    closeWebApp,
+    showAlert,
+  } = useTelegram();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showFallbackUI, setShowFallbackUI] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isTelegramWebApp) {
-        setShowFallbackUI(true);
-        setLoading(false);
-      }
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [isTelegramWebApp]);
-
-  useEffect(() => {
-    if (!isTelegramWebApp || !initData) return;
-
     const authenticate = async () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL;
-        await axios.post(`${API_URL}/api/auth`, { initData });
+
+        // Use dummy data if not in Telegram
+        const payload = initData || "fallback_init_data";
+
+        await axios.post(`${API_URL}/api/auth`, { initData: payload });
 
         localStorage.setItem(
           "vipCasinoUser",
           JSON.stringify({
-            user,
-            initData,
+            user: user || { id: "guest", first_name: "Guest" },
+            initData: payload,
           })
         );
 
-        window.location.href = "/home";
+        navigate("/home");
       } catch (err) {
         setError(err.response?.data?.message || "Authentication failed");
         showAlert(
@@ -49,34 +48,7 @@ export default function Login() {
     };
 
     authenticate();
-  }, [initData, isTelegramWebApp, showAlert]);
-
-  if (showFallbackUI) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-md space-y-6 bg-white/10 backdrop-blur-md p-8 rounded-xl shadow-lg border border-white/10"
-        >
-          <h2 className="text-3xl font-extrabold text-white">
-            🚫 Not in Telegram
-          </h2>
-          <p className="text-sm text-gray-300">
-            This app is meant to run inside Telegram WebApp.
-          </p>
-          <CustomButton
-            className="w-full"
-            onClick={() =>
-              (window.location.href = "https://t.me/zg_casino_bot")
-            }
-          >
-            Open in Telegram
-          </CustomButton>
-        </motion.div>
-      </div>
-    );
-  }
+  }, [initData, user, showAlert, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black to-gray-800 text-white px-6">
@@ -111,7 +83,7 @@ export default function Login() {
           className="text-center p-8 rounded-lg bg-white/10 backdrop-blur-md border border-white/10 shadow-lg"
         >
           <h2 className="text-3xl font-bold">
-            🎉 Welcome, {user?.first_name || "User"}!
+            🎉 Welcome, {user?.first_name || "Guest"}!
           </h2>
         </motion.div>
       )}

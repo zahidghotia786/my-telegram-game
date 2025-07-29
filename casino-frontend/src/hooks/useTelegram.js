@@ -1,4 +1,3 @@
-// src/hooks/useTelegram.js
 import { useState, useEffect } from 'react';
 
 export function useTelegram() {
@@ -9,44 +8,36 @@ export function useTelegram() {
   const [isTelegramWebApp, setIsTelegramWebApp] = useState(false);
 
   useEffect(() => {
-    // Check if running in Telegram WebApp
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
       const telegram = window.Telegram.WebApp;
-      
-      // Expand the WebApp to full view
       telegram.expand();
-      
-      // Set state
+      telegram.ready();
+
       setTg(telegram);
       setUser(telegram.initDataUnsafe?.user ?? null);
       setQueryId(telegram.initDataUnsafe?.query_id ?? null);
       setInitData(telegram.initData ?? null);
       setIsTelegramWebApp(true);
 
-      // Initialize the WebApp
-      telegram.ready();
-      
-      console.log("✅ Telegram WebApp initialized:", {
-        user: telegram.initDataUnsafe?.user,
-        initData: telegram.initData,
-        platform: telegram.platform,
-        themeParams: telegram.themeParams
-      });
+      console.log("✅ Telegram WebApp initialized");
     } else {
-      console.warn("⚠️ Not running in Telegram WebApp - some features will be disabled");
+      console.warn("⚠️ Not in Telegram WebApp - using fallback values");
+      setTg(null);
+      setUser({ id: "guest", first_name: "Guest" });
+      setQueryId("fallback_query");
+      setInitData("fallback_init_data");
       setIsTelegramWebApp(false);
     }
   }, []);
 
-  return { 
-    tg, 
-    user, 
-    queryId, 
-    initData, 
+  return {
+    tg,
+    user,
+    queryId,
+    initData,
     isTelegramWebApp,
-    // Common convenience methods
-    closeWebApp: () => isTelegramWebApp && tg.close(),
-    showAlert: (message) => isTelegramWebApp && tg.showAlert(message),
-    showConfirm: (message) => isTelegramWebApp && tg.showConfirm(message),
+    closeWebApp: () => isTelegramWebApp && tg?.close(),
+    showAlert: (msg) => isTelegramWebApp && tg?.showAlert(msg),
+    showConfirm: (msg) => isTelegramWebApp && tg?.showConfirm(msg),
   };
 }
